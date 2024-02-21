@@ -100,7 +100,7 @@ var maxs :Vector3 = Vector3(-1000000,-1000000,-1000000)
 # Primary RefCounted: https://0fps.net/2012/06/30/meshing-in-a-minecraft-game/
 # Secondary RefCounted: https://www.gedge.ca/dev/2014/08/17/greedy-voxel-meshing
 # voxel_data is a dict[Vector3]int
-func generate(vox :VoxData, voxel_data :Dictionary, scale :float, snaptoground : bool):
+func generate(vox :VoxData, voxel_data :Dictionary, scale :float, snaptoground : bool, shade_smooth: bool):
 	# Remeber, MagicaVoxel thinks Y is the depth axis. We convert to the correct
 	# coordinate space when we generate the faces.
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -124,7 +124,7 @@ func generate(vox :VoxData, voxel_data :Dictionary, scale :float, snaptoground :
 	
 	# Itterate over all face orientations to reduce problem to 3 dimensions
 	for o in face_orientations:
-		generate_geometry_for_orientation(voxel_data, o, scale, snaptoground)
+		generate_geometry_for_orientation(voxel_data, o, scale, snaptoground, shade_smooth)
 
 	# Finish the mesh and material and return
 	var material = StandardMaterial3D.new()
@@ -135,13 +135,13 @@ func generate(vox :VoxData, voxel_data :Dictionary, scale :float, snaptoground :
 	return st.commit()
 
 # Generates all of the geometry for a given face orientation
-func generate_geometry_for_orientation(voxel_data :Dictionary, o :int, scale :float, snaptoground :bool) -> void:
+func generate_geometry_for_orientation(voxel_data :Dictionary, o :int, scale :float, snaptoground :bool, shade_smooth: bool) -> void:
 	# Sweep through the volume along the depth reducing the problem to 2 dimensional
 	var da :int = depth_axis[o]
 	for slice in range(mins[da], maxs[da]+1):
 		var faces :Dictionary = query_slice_faces(voxel_data, o, slice)
 		if faces.size() > 0:
-			generate_geometry(faces, o, slice, scale, snaptoground)
+			generate_geometry(faces, o, slice, scale, snaptoground, shade_smooth)
 
 # Returns the voxels in the set voxel_data with a visible face along the slice
 # for the given orientation
@@ -154,7 +154,7 @@ func query_slice_faces(voxel_data :Dictionary, o :int, slice :float) -> Dictiona
 	return ret
 
 # Generates geometry for the given orientation for the set of faces
-func generate_geometry(faces :Dictionary, o :int, slice :float, scale :float, snaptoground :bool) -> void:
+func generate_geometry(faces :Dictionary, o :int, slice :float, scale :float, snaptoground :bool, shade_smooth: bool) -> void:
 	var da :int = depth_axis[o]
 	var wa :int = width_axis[o]
 	var ha :int = height_axis[o]
@@ -168,13 +168,13 @@ func generate_geometry(faces :Dictionary, o :int, slice :float, scale :float, sn
 		v[wa] = mins[wa]
 		while v[wa] <= maxs[wa]:
 			if faces.has(v):
-				generate_geometry_for_face(faces, v, o, scale, snaptoground)
+				generate_geometry_for_face(faces, v, o, scale, snaptoground, shade_smooth)
 			v[wa] += 1.0
 		v[ha] += 1.0
 
 # Generates the geometry for the given face and orientation and scale and returns
 # the set of remaining faces
-func generate_geometry_for_face(faces :Dictionary, face :Vector3, o :int, scale :float, snaptoground :bool) -> Dictionary:
+func generate_geometry_for_face(faces :Dictionary, face :Vector3, o :int, scale :float, snaptoground :bool, shade_smooth: bool) -> Dictionary:
 	var da :int = depth_axis[o]
 	var wa :int = width_axis[o]
 	var ha :int = height_axis[o]
@@ -191,7 +191,10 @@ func generate_geometry_for_face(faces :Dictionary, face :Vector3, o :int, scale 
 	if snaptoground : yoffset = Vector3(0, -mins.z * scale, 0);
 
 	st.set_color(faces[face])
-	st.set_normal(normals[o])
+	
+	if shade_smooth: st.generate_normals()
+	else: st.set_normal(normals[o])
+	
 	for vert in face_meshes[o]:
 		st.add_vertex(yoffset + vox_to_godot * ((vert * grow) + face) * scale)
 	
