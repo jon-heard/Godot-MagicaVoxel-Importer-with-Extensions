@@ -36,8 +36,8 @@ func _get_priority() -> float:
 func _get_import_options(path, preset_index):
 	return [
 		{
-			'name': 'Scale',
-			'default_value': 0.1
+			'name': 'PixelsPerMetr',
+			'default_value': 32
 		},
 		{
 			'name': 'GreedyMeshGenerator',
@@ -45,6 +45,10 @@ func _get_import_options(path, preset_index):
 		},
 		{
 			'name': 'SnapToGround',
+			'default_value': false
+		},
+		{
+			'name': 'ShadeSmooth',
 			'default_value': false
 		}
 	]

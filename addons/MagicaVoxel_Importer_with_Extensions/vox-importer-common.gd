@@ -13,15 +13,18 @@ const debug_models = false;
 var fileKeyframeIds = [];
 
 func import(source_path, destination_path, options, _platforms, _gen_files):
-	var scale = 0.1
-	if options.Scale:
-		scale = float(options.Scale)
+	var scale : float
+	if options.PixelsPerMetr:
+		scale = 1 / float(options.PixelsPerMetr)
 	var greedy = true
 	if options.has("GreedyMeshGenerator"):
 		greedy = bool(options.GreedyMeshGenerator)
 	var snaptoground = false
 	if options.has("SnapToGround"):
 		snaptoground = bool(options.SnapToGround)
+	var shade_smooth = false
+	if options.has("ShadeSmooth"):
+		shade_smooth = bool(options.ShadeSmooth)
 	var mergeKeyframes = false
 	if options.has("FirstKeyframeOnly"):
 		mergeKeyframes = not bool(options.FirstKeyframeOnly)
@@ -34,7 +37,14 @@ func import(source_path, destination_path, options, _platforms, _gen_files):
 
 	var identifier = PackedByteArray([ file.get_8(), file.get_8(), file.get_8(), file.get_8() ]).get_string_from_ascii()
 	var version = file.get_32()
-	print('Importing: ', source_path, ' (scale: ', scale, ', file version: ', version, ', greedy mesh: ', greedy, ', snap to ground: ', snaptoground, ')');
+	print('Importing: ', source_path,
+				' (scale: ', scale,
+				', file version: ', version,
+				', greedy mesh: ', greedy,
+				', snap to ground: ', snaptoground,
+				', shade smooth: ', shade_smooth,
+				', merge frames: ', mergeKeyframes,
+				')');
 
 	var vox = VoxData.new();
 	if identifier == 'VOX ':
@@ -49,7 +59,7 @@ func import(source_path, destination_path, options, _platforms, _gen_files):
 	var meshes = []
 	for keyframeVoxels in voxel_data:
 		if greedy:
-			meshes.append(GreedyMeshGenerator.new().generate(vox, voxel_data[keyframeVoxels], scale, snaptoground))
+			meshes.append(GreedyMeshGenerator.new().generate(vox, voxel_data[keyframeVoxels], scale, snaptoground, shade_smooth))
 		else:
 			meshes.append(CulledMeshGenerator.new().generate(vox, voxel_data[keyframeVoxels], scale, snaptoground))
 	return meshes
